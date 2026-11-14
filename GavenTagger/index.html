@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="description" content="GavenTag: local-first Danbooru image tagger and AI prompt composer." />
+  <title>GavenTag — Image Tagger & Prompt Studio</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="ambient ambient-a" aria-hidden="true"></div>
+  <div class="ambient ambient-b" aria-hidden="true"></div>
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="./" class="brand" aria-label="GavenTag home">
+        <div class="brand-mark" aria-hidden="true"><span>G</span><i></i></div>
+        <div class="brand-copy"><strong>GAVEN<span>TAG</span></strong><small>IMAGE INTELLIGENCE LAB</small></div>
+      </a>
+      <div class="topbar-right">
+        <span class="tagger-pill"><span class="pill-dot" id="engineDot"></span><span id="engineLabel">ENGINE IDLE</span></span>
+        <a class="toplink" href="https://huggingface.co/SmilingWolf/wd-vit-tagger-v3" target="_blank" rel="noopener noreferrer">MODEL SOURCE <span aria-hidden="true">↗</span></a>
+      </div>
+    </header>
+
+    <main>
+      <section class="headline">
+        <div class="eyebrow"><span class="eyebrow-line"></span> THE VISUAL TO PROMPT WORKFLOW</div>
+        <h1>Every detail.<br><em>One perfect prompt.</em></h1>
+        <p>Turn images into editable Danbooru tags with real, on-device AI inference. Fine-tune the results and export prompts for your favorite image models.</p>
+        <div class="headline-flags"><span>◇ Private by design</span><span>◇ 10,861 model labels</span><span>◇ No account required</span></div>
+      </section>
+
+      <section class="workspace" aria-label="Image tagging workspace">
+        <div class="left-col">
+          <article class="panel image-panel">
+            <div class="panel-header"><div><div class="section-kicker">01 / INPUT</div><h2>Source image</h2></div><button id="clearImageBtn" class="small-link" type="button" disabled>Clear image ×</button></div>
+            <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Choose or drop an image">
+              <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden />
+              <div class="drop-empty" id="dropEmpty">
+                <div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V3m-4 4 4-4 4 4"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></div>
+                <strong>Drop your image here</strong>
+                <span>or <u>browse files</u> to get started</span>
+                <small>PNG · JPG · WEBP · GIF · BMP · Max 30 MB</small>
+              </div>
+              <img id="previewImage" class="preview-image" alt="Selected image to analyze" hidden />
+              <span id="replaceOverlay" class="replace-overlay" hidden>Click to replace image</span>
+            </div>
+            <div class="image-meta" id="imageMeta"><span>NO IMAGE SELECTED</span><span>YOUR IMAGES STAY IN YOUR BROWSER</span></div>
+          </article>
+
+          <article class="panel engine-panel">
+            <div class="panel-header"><div><div class="section-kicker">02 / ANALYSIS</div><h2>Inference engine</h2></div><span class="outline-mini">WD ViT v3</span></div>
+            <div class="model-detail"><div class="model-icon">✳</div><div><strong>SmilingWolf / WD ViT Tagger v3</strong><p>Anime & illustration tag classifier · Apache 2.0 model</p></div></div>
+            <div class="field-row"><label for="sourceSelect">Model source</label><select id="sourceSelect"><option value="remote">Download from Hugging Face</option><option value="local">Use a local .onnx file</option></select></div>
+            <div id="localModelRow" class="local-file-row" hidden><label class="file-btn" for="localModelInput">Choose model.onnx</label><input type="file" id="localModelInput" accept=".onnx,application/octet-stream" hidden /><span id="localModelName">No model chosen</span></div>
+            <div class="local-file-row"><label class="file-btn" for="localLabelsInput">Optional local tags CSV</label><input type="file" id="localLabelsInput" accept=".csv,text/csv" hidden /><span id="localLabelsName">Uses matching online vocabulary</span></div>
+            <div class="field-row"><label for="backendSelect">Compute backend</label><select id="backendSelect"><option value="auto">Auto · WebGPU / CPU fallback</option><option value="wasm">CPU · WebAssembly</option></select></div>
+            <div class="field-row"><label for="cacheModelInput">Cache downloaded model</label><label class="switch"><input id="cacheModelInput" type="checkbox" checked /><span class="switch-track"></span></label></div>
+            <p class="model-note">First download is approximately 379 MB. Inference happens on your device; only model files are downloaded. A desktop browser with sufficient RAM is recommended.</p>
+            <div class="progress-wrap" id="progressWrap" hidden><div class="progress-title"><span id="progressStage">Preparing model</span><span id="progressPercent">0%</span></div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div></div>
+            <button class="primary-action" id="analyzeBtn" disabled><span class="action-symbol">✦</span><span id="analyzeLabel">Analyze image</span><span class="arrow-symbol">→</span></button>
+            <div id="statusMessage" class="status-message" role="status" aria-live="polite">Choose an image to start.</div>
+          </article>
+        </div>
+
+        <div class="right-col">
+          <article class="panel results-panel">
+            <div class="panel-header results-heading"><div><div class="section-kicker">03 / RECOGNITION</div><h2>Detected tags <span id="resultCount" class="count-pill">0</span></h2></div><button type="button" id="resetHiddenBtn" class="small-link" disabled>Restore all</button></div>
+            <div class="settings-grid">
+              <div class="setting"><label for="generalThreshold">General confidence <output id="generalThresholdVal">35%</output></label><input id="generalThreshold" type="range" min="5" max="95" step="5" value="35" /></div>
+              <div class="setting"><label for="characterThreshold">Character confidence <output id="characterThresholdVal">85%</output></label><input id="characterThreshold" type="range" min="5" max="95" step="5" value="85" /></div>
+            </div>
+            <div class="results-toolbar"><div class="tabs" role="tablist" aria-label="Tag category"><button type="button" class="tab active" data-filter="all" aria-selected="true">All tags</button><button type="button" class="tab" data-filter="general" aria-selected="false">General</button><button type="button" class="tab" data-filter="character" aria-selected="false">Characters</button><button type="button" class="tab" data-filter="manual" aria-selected="false">Added</button></div><label class="search-control"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg><input type="search" id="searchTags" placeholder="Filter tags" aria-label="Filter tags" /></label></div>
+            <div id="ratingLine" class="rating-line" hidden></div>
+            <div id="tagList" class="tag-list"><div class="results-empty"><span class="empty-glyph">✦</span><strong>Waiting for your image</strong><p>Detected tags and confidence scores will appear here once the model finishes analyzing.</p></div></div>
+            <div class="tag-bottom"><div class="manual-entry"><input id="manualTagInput" type="text" maxlength="100" placeholder="Add a tag or custom phrase..." list="tagSuggestions" /><datalist id="tagSuggestions"></datalist><button type="button" id="addTagBtn" title="Add tag">+ Add</button></div><div class="tag-legend"><span><i class="legend-dot teal"></i> Model prediction</span><span><i class="legend-dot violet"></i> Manually added</span><span>Click × to exclude</span></div></div>
+          </article>
+
+          <article class="panel prompt-panel">
+            <div class="panel-header"><div><div class="section-kicker">04 / OUTPUT</div><h2>Prompt composer</h2></div><span class="outline-mini">LIVE OUTPUT</span></div>
+            <div class="composer-controls"><div class="field"><label for="formatSelect">Tag format</label><select id="formatSelect"><option value="danbooru">Danbooru · underscores</option><option value="natural">Natural · spaces</option></select></div><div class="field"><label for="weightSelect">Tag weights</label><select id="weightSelect"><option value="none">Plain tags</option><option value="confidence">Weight by confidence</option></select></div></div>
+            <div class="compose-options"><label><input id="includeQualityInput" type="checkbox" checked /> Quality prefix</label><label><input id="includeCharactersInput" type="checkbox" checked /> Character tags</label></div>
+            <label class="input-label" for="prefixInput">Quality / style prefix <span>Optional</span></label><input id="prefixInput" class="wide-input" type="text" value="masterpiece, best quality, highly detailed" placeholder="masterpiece, best quality..." />
+            <div class="output-head"><label for="promptOutput">Positive prompt</label><span id="tokenCount">0 tags</span></div>
+            <textarea id="promptOutput" rows="5" spellcheck="false" readonly placeholder="Your Danbooru-style prompt will appear here."></textarea>
+            <div class="output-actions"><button id="copyPromptBtn" type="button" class="copy-action">⧉ Copy positive</button><button id="downloadTxtBtn" type="button" class="secondary-action">↓ Export .txt</button></div>
+            <label class="input-label negative-label" for="negativeOutput">Negative prompt <span>Editable</span></label><textarea id="negativeOutput" rows="3" spellcheck="false">lowres, worst quality, low quality, blurry, bad anatomy, extra limbs, malformed hands, text, watermark, jpeg artifacts</textarea>
+            <div class="output-actions"><button id="copyNegativeBtn" type="button" class="copy-action subdued">⧉ Copy negative</button><button id="exportJsonBtn" type="button" class="secondary-action">↓ Export tags .json</button></div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>GAVENTAG <b>·</b> v1.0</span><span>LOCAL-FIRST IMAGE ANALYSIS <b>·</b> NO CLOUD IMAGE UPLOAD</span><a href="https://huggingface.co/SmilingWolf/wd-vit-tagger-v3" target="_blank" rel="noopener noreferrer">WD VIT MODEL ↗</a></footer>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.min.js" defer></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
